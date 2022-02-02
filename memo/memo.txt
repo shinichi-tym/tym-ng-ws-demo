@@ -7,3 +7,30 @@
 Enter を実行する。
 
 「使い方 : CScript ...」が表示される。
+
+----
+
+(1) 作業フォルダーを作成する
+  例: C:\work
+
+(2) 作業フォルダーにファイルをダウンロードする
+  make.wsf
+  https://shinichi-tym.github.io/tym-ng-ws-demo/memo/make.wsf
+
+(3) コマンドプロンプトを起動する。
+
+(4) 作業フォルダーに移動する
+  例: CD C:\work と入力し Enter を実行する。
+
+(5) スクリプトを実行する (対象のフォルダーを指定する)
+  例: cscript make.wsf "\\172.nn.nn.nn\aaaaa\bbbb...\cccc"
+  => C:\work\cccc.txt が作成される
+
+(6) ファイルをメモ帳で開き，全ての内容をコピーする
+  例: C:\work\cccc.txt
+  メモ帳: 「編集」-「すべて選択」,「編集」-「コピー」
+
+(7) エクセルファイルを開き，コピーした内容を貼り付ける
+  例: C:\work\cccc.xlsx
+
+これで，ある程度，ええ感じになってないかなぁ・・・？

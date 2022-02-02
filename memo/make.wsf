@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<package><job><script language="VBScript"><![CDATA[
+
+Option Explicit
+'////////////////////////////////////////
+
+Dim findPath
+
+'////////////////////////////////////////
+
+Dim fso: Set fso = CreateObject("Scripting.FileSystemObject")
+Dim out: Set out = CreateObject("ADODB.Stream")
+With out
+  .Type = 2
+  .Charset = "UTF-8"
+End With
+
+'////////////////////////////////////////
+'// Main
+Sub Main
+
+    Dim rf : Set rf = fso.GetFolder(findPath)
+    Dim fn : fn = fso.GetFileName(findPath)
+
+    '出力ファイルオープン
+    out.Open
+
+    '指定フォルダ出力
+    out.WriteText "FOL"&vbTab&findPath, 1
+
+    'フォルダー単位出力
+    On Error Resume Next
+
+    Call GetSubFolder(rf)
+
+    'エラー出力
+    If Err.Number <> 0 Then
+        WScript.Echo Err.Number & ":" & Err.Description
+        WScript.Quit(Err.Number)
+    End If
+
+    'ファイル出力＆クローズ
+    out.SaveToFile fn & ".txt", 2
+    out.Close
+
+End Sub
+
+'////////////////////////////////////////
+'// Main
+Dim arg: Set arg = WScript.Arguments.Unnamed
+If arg.Count = 1 Then
+    findPath = arg(0)
+    Call Main
+Else
+    WScript.Echo "引数を指定してください"
+End If
+
+'////////////////////////////////////////
+'// フォルダー単位出力
+Sub GetSubFolder(cf)
+
+    Dim i, tx, mk, ex, sf, fl
+
+    'サブフォルダー出力
+    For Each sf In cf.SubFolders
+        tx = indent(sf.Path)
+        out.WriteText tx&"│", 1
+        out.WriteText tx&"├"&vbTab&"─"&vbTab&"FOL"&vbTab&sf.Name, 1
+        Call GetSubFolder(sf)
+    Next
+
+    'ファイル出力
+    i = 1
+    For Each fl In cf.Files
+        tx = indent(fl.Path)
+        mk = mark(i, cf.Files)
+        ex = LCase(fso.GetExtensionName(fl))
+        out.WriteText tx&"│", 1
+        out.WriteText tx&mk&vbTab&"─"&vbTab&ex&vbTab&fl.Name, 1
+        i = i + 1
+    Next
+
+End Sub
+
+Function indent(fp)
+    Dim i, lv: lv = UBound(Split(Replace(fp, findPath, ""), "\"))
+    indent = "": For i = 2 To lv: indent = indent&"│"&vbTab&vbTab:Next
+End Function
+
+Function mark(i, oj)
+    If i = oj.Count Then
+        mark = "└"
+    Else
+        mark = "├"
+    End If
+End Function
+
+]]></script></job></package>
