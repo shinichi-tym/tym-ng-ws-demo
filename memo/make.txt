@@ -19,8 +19,10 @@ End With
 '// Main
 Sub Main
 
+    Dim lv : lv = 1
     Dim rf : Set rf = fso.GetFolder(findPath)
     Dim fn : fn = fso.GetFileName(findPath)
+    findPath = rf.Path
 
     '出力ファイルオープン
     out.Open
@@ -31,7 +33,7 @@ Sub Main
     'フォルダー単位出力
     On Error Resume Next
 
-    Call GetSubFolder(rf)
+    Call GetSubFolder(rf, lv)
 
     'エラー出力
     If Err.Number <> 0 Then
@@ -50,24 +52,38 @@ End Sub
 Dim arg: Set arg = WScript.Arguments.Unnamed
 If arg.Count = 1 Then
     findPath = arg(0)
+    WScript.Echo "開始します" & vbCrLf
     Call Main
+    WScript.Echo vbCrLf & "終了しました"
 Else
     WScript.Echo "引数を指定してください"
 End If
 
 '////////////////////////////////////////
 '// フォルダー単位出力
-Sub GetSubFolder(cf)
+Sub GetSubFolder(cf, lv)
 
     Dim i, tx, mk, ex, sf, fl
 
+    If lv < 3 Then
+        WScript.Echo Space(lv * 2) & cf.Name
+    End If
+
     'サブフォルダー出力
-    For Each sf In cf.SubFolders
-        tx = indent(sf.Path)
-        out.WriteText tx&"│", 1
-        out.WriteText tx&"├"&vbTab&"─"&vbTab&"FOL"&vbTab&sf.Name, 1
-        Call GetSubFolder(sf)
-    Next
+    On Error Resume Next
+    i = cf.SubFolders.Count
+    If Err.Number <> 0 Then
+        WScript.Echo "アクセスできませんでした(" & Err.Number & ")"
+        WScript.Echo "ファイルパス(" & cf.Path & ")"
+    Else
+        For Each sf In cf.SubFolders
+            tx = indent(sf.Path)
+            out.WriteText tx&"│", 1
+            out.WriteText tx&"├"&vbTab&"─"&vbTab&"FOL"&vbTab&sf.Name, 1
+            Call GetSubFolder(sf, lv + 1)
+        Next
+    End If
+    On Error GoTo 0
 
     'ファイル出力
     i = 1
