@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<package><job><script language="VBScript"><![CDATA[
+
+Option Explicit
+'////////////////////////////////////////
+
+Dim findPath
+
+'////////////////////////////////////////
+
+Dim fso: Set fso = CreateObject("Scripting.FileSystemObject")
+Dim sht
+Dim row: row = 0
+
+'////////////////////////////////////////
+'// Main
+Sub Main
+
+    'Excelアプリケーションのインスタンス生成
+    On Error Resume Next
+    Dim xls : Set xls = CreateObject("Excel.Application")
+    If Err.Number <> 0 Then
+        WScript.Echo Err.Number & ":" & Err.Description
+        Exit Sub
+    End If
+    If Not xls Then
+        WScript.Echo "Excel.Application 起動エラー"
+        Exit Sub
+    End If
+    xls.Visible = True
+    xls.ScreenUpdating = False
+    On Error GoTo 0
+
+    Dim lv : lv = 1
+    Dim rf : Set rf = fso.GetFolder(findPath)
+    Dim fn : fn = fso.GetFileName(findPath)
+    findPath = rf.Path
+
+    'ワークシートを作成
+    Dim wkb : Set wkb = xls.Workbooks.Add()
+    Set sht = wkb.Sheets(1)
+    sht.Activate
+    sht.Cells.NumberFormatLocal = "@"
+
+    '指定フォルダ出力
+    writesht "FOL"&vbTab&findPath
+
+    'フォルダー単位出力
+    On Error Resume Next
+
+    Call GetSubFolder(rf, lv)
+
+    'エラー出力
+    If Err.Number <> 0 Then
+        WScript.Echo Err.Number & ":" & Err.Description
+        WScript.Quit(Err.Number)
+    End If
+
+    'ワークシート・エクセルファイル出力＆クローズ
+    xls.ScreenUpdating = True
+    xls.Visible = True
+    wkb.SaveAs(fso.BuildPath(fso.GetAbsolutePathName("."), fn & ".xlsx"))
+
+    wkb.Close
+    xls.Quit
+
+    Set sht = Nothing
+    Set wkb = Nothing
+    Set xks = Nothing
+
+End Sub
+
+'////////////////////////////////////////
+'// Main
+Dim arg: Set arg = WScript.Arguments.Unnamed
+If arg.Count = 1 Then
+    findPath = arg(0)
+    WScript.Echo "開始します" & vbCrLf
+    Call Main
+    WScript.Echo vbCrLf & "終了しました"
+Else
+    WScript.Echo "引数を指定してください"
+End If
+
+'////////////////////////////////////////
+'// フォルダー単位出力
+Sub GetSubFolder(cf, lv)
+
+    Dim i, tx, mk, ex, sf, fl
+
+    If lv < 3 Then
+        WScript.Echo Space(lv * 2) & cf.Name
+    End If
+
+    'サブフォルダー出力
+    On Error Resume Next
+    i = cf.SubFolders.Count
+    If Err.Number <> 0 Then
+        WScript.Echo "アクセスできませんでした(" & Err.Number & ")"
+        WScript.Echo "ファイルパス(" & cf.Path & ")"
+    Else
+        For Each sf In cf.SubFolders
+            tx = indent(sf.Path)
+            writesht tx&"│"&vbTab
+            writesht tx&"├"&vbTab&"─"&vbTab&"FOL"&vbTab&sf.Name
+            Call GetSubFolder(sf, lv + 1)
+        Next
+    End If
+    On Error GoTo 0
+
+    'ファイル出力
+    i = 1
+    For Each fl In cf.Files
+        tx = indent(fl.Path)
+        mk = mark(i, cf.Files)
+        ex = LCase(fso.GetExtensionName(fl))
+        writesht tx&"│"&vbTab
+        writesht tx&mk&vbTab&"─"&vbTab&ex&vbTab&fl.Name
+        i = i + 1
+    Next
+
+End Sub
+
+Function indent(fp)
+    Dim i, lv: lv = UBound(Split(Replace(fp, findPath, ""), "\"))
+    indent = "": For i = 2 To lv: indent = indent&"│"&vbTab&vbTab:Next
+End Function
+
+Function mark(i, oj)
+    If i = oj.Count Then
+        mark = "└"
+    Else
+        mark = "├"
+    End If
+End Function
+
+Sub writesht(str)
+    row = row + 1
+    Dim ary : ary = Split(str, vbTab)
+    For i = 0 To UBound(ary)
+	    sht.Cells(row, i + 1).Value = ary(i)
+    Next
+    Dim b : b = ary(UBound(ary) - 1)
+    Dim a : a = ary(UBound(ary))
+    If a <> "" Then
+        Dim img : img = ".\img\"&b&".png"
+        If fso.FileExists(img) Then
+            With sht.Pictures.Insert(img)
+                .Top = sht.Cells(row, i + 1).Top
+                .Left = sht.Cells(row, i + 1).Left
+                sht.Shapes(.Name).LockAspectRatio = msoFalse
+                .Height = sht.Cells(row, i + 1).Height
+                .Copy
+                sht.PasteSpecial(1)
+                Selection.Top = .Top
+                Selection.Left = .Left
+                .Delete
+            End With
+        End If
+    End If
+End Sub
+
+]]></script></job></package>
