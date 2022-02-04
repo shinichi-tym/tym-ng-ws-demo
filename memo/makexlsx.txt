@@ -35,7 +35,7 @@ Sub Main
     End If
 
     'True:Excel起動, False:Excel利用
-    Dim xlsapp : xlsapp = Flase
+    Dim xlsapp : xlsapp = False
     'Excelアプリケーションのインスタンス生成/ワークシート作成
     Dim xls, wkb
     If xlsapp Then
@@ -45,7 +45,7 @@ Sub Main
         If Err.Number <> 0 Then
             WScript.Echo Err.Number & ":" & Err.Description
         End If
-        If Not xls Then
+        If Not IsObject(xls) Then
             WScript.Echo "Excel が起動できませんでした"
             Exit Sub
         End If
@@ -58,10 +58,11 @@ Sub Main
         If Err.Number <> 0 Then
             WScript.Echo Err.Number & ":" & Err.Description
         End If
-        If Not wkb Then
+        If Not IsObject(wkb) Then
             WScript.Echo "Excel が起動されていません"
             Exit Sub
         End If
+        On Error GoTo 0
     End If
 
     '描画制御(高速化!?)
