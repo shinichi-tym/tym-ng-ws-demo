@@ -16,31 +16,63 @@ Dim row: row = 0
 '// Main
 Sub Main
 
-    'Excelアプリケーションのインスタンス生成
-    On Error Resume Next
-    Dim xls : Set xls = CreateObject("Excel.Application")
-    If Err.Number <> 0 Then
-        WScript.Echo Err.Number & ":" & Err.Description
-        Exit Sub
-    End If
-    If Not xls Then
-        WScript.Echo "Excel.Application 起動エラー"
-        Exit Sub
-    End If
-    xls.Visible = True
-    xls.ScreenUpdating = False
-    On Error GoTo 0
-
+    '指定フォルダーパスの処理
     Dim lv : lv = 1
     Dim rf : Set rf = fso.GetFolder(findPath)
     Dim fn : fn = fso.GetFileName(findPath)
     findPath = rf.Path
 
-    'ワークシートを作成
-    Dim wkb : Set wkb = xls.Workbooks.Add()
+    Dim saveFile : saveFile = fso.GetAbsolutePathName(".\"&fn&".xlsx")
+    If fso.FileExists(saveFile) Then
+        WScript.Echo "ファイルがあります("&saveFile&")"
+        Exit Sub
+    End If
+
+    Dim imgFolder : imgFolder = fso.GetAbsolutePathName(".\img")
+    If Not fso.FolderExists(imgFolder) Then
+        WScript.Echo "フォルダーがありません("&imgFolder&")"
+        Exit Sub
+    End If
+
+    'True:Excel起動, False:Excel利用
+    Dim xlsapp : xlsapp = Flase
+    'Excelアプリケーションのインスタンス生成/ワークシート作成
+    Dim xls, wkb
+    If xlsapp Then
+        'Excelアプリケーションを起動して実行する
+        On Error Resume Next
+        Set xls = CreateObject("Excel.Application")
+        If Err.Number <> 0 Then
+            WScript.Echo Err.Number & ":" & Err.Description
+        End If
+        If Not xls Then
+            WScript.Echo "Excel が起動できませんでした"
+            Exit Sub
+        End If
+        Set wkb = xls.Workbooks.Add()
+        On Error GoTo 0
+    Else
+        '起動されているExcelアプリケーションを利用して実行する(高速!?)
+        On Error Resume Next
+        Set wkb = CreateObject("Excel.Sheet")
+        If Err.Number <> 0 Then
+            WScript.Echo Err.Number & ":" & Err.Description
+        End If
+        If Not wkb Then
+            WScript.Echo "Excel が起動されていません"
+            Exit Sub
+        End If
+    End If
+
+    '描画制御(高速化!?)
+    wkb.Application.Visible = True
+    wkb.Application.ScreenUpdating = False
+
+    'ワークシートの初期設定
     Set sht = wkb.Sheets(1)
     sht.Activate
     sht.Cells.NumberFormatLocal = "@"
+    sht.Range("A:J").ColumnWidth = 3
 
     '指定フォルダ出力
     writesht "FOL"&vbTab&findPath
@@ -50,19 +82,26 @@ Sub Main
 
     Call GetSubFolder(rf, lv)
 
-    'エラー出力
-    If Err.Number <> 0 Then
-        WScript.Echo Err.Number & ":" & Err.Description
-        WScript.Quit(Err.Number)
-    End If
+    'エラー情報保存
+    Dim ErrNum : ErrNum = Err.Number
+    Dim ErrTxt : ErrTxt = Err.Description
 
     'ワークシート・エクセルファイル出力＆クローズ
-    xls.ScreenUpdating = True
-    xls.Visible = True
-    wkb.SaveAs(fso.BuildPath(fso.GetAbsolutePathName("."), fn & ".xlsx"))
+    wkb.Application.ScreenUpdating = True
+    wkb.Application.Visible = True
 
-    wkb.Close
-    xls.Quit
+    If ErrNum <> 0 Then
+        'エラー出力
+        WScript.Echo ErrNum & ":" & ErrTxt
+    Else
+        'ワークシート・エクセルファイル出力＆クローズ
+        wkb.SaveAs(saveFile)
+        wkb.Close
+    End If
+
+    If xlsapp Then
+        xls.Quit
+    End If
 
     Set sht = Nothing
     Set wkb = Nothing
@@ -121,11 +160,15 @@ Sub GetSubFolder(cf, lv)
 
 End Sub
 
+'////////////////////////////////////////
+'// インデント文字列作成
 Function indent(fp)
     Dim i, lv: lv = UBound(Split(Replace(fp, findPath, ""), "\"))
     indent = "": For i = 2 To lv: indent = indent&"│"&vbTab&vbTab:Next
 End Function
 
+'////////////////////////////////////////
+'// 直下罫線文字列作成
 Function mark(i, oj)
     If i = oj.Count Then
         mark = "└"
@@ -134,28 +177,33 @@ Function mark(i, oj)
     End If
 End Function
 
+'////////////////////////////////////////
+'// セルの文字・画像を設定
 Sub writesht(str)
     row = row + 1
     Dim ary : ary = Split(str, vbTab)
-    For i = 0 To UBound(ary)
+    Dim m : m = UBound(ary)
+    '※ aryは0～m, Cellsは 1～m+1
+    Dim i : For i = 0 To m
 	    sht.Cells(row, i + 1).Value = ary(i)
     Next
-    Dim b : b = ary(UBound(ary) - 1)
-    Dim a : a = ary(UBound(ary))
+    Dim b : b = ary(m - 1)
+    Dim a : a = ary(m)
     If a <> "" Then
-        Dim img : img = ".\img\"&b&".png"
+        Dim img : img = fso.GetAbsolutePathName(".\img\"&b&".png")
         If fso.FileExists(img) Then
             With sht.Pictures.Insert(img)
-                .Top = sht.Cells(row, i + 1).Top
-                .Left = sht.Cells(row, i + 1).Left
-                sht.Shapes(.Name).LockAspectRatio = msoFalse
-                .Height = sht.Cells(row, i + 1).Height
+                .Top = sht.Cells(row, m).Top
+                .Left = sht.Cells(row, m).Left
+                .Height = sht.Cells(row, m).Height
                 .Copy
+                sht.Cells(row, m).Select
                 sht.PasteSpecial(1)
-                Selection.Top = .Top
-                Selection.Left = .Left
                 .Delete
             End With
+            sht.Cells(row, m).Value = ""
+        Else
+            sht.Cells(row, m).Interior.ColorIndex = 36
         End If
     End If
 End Sub
