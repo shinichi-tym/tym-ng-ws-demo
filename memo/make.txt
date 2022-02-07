@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <package><job><script language="VBScript"><![CDATA[
 
+' update 2022.02.07 14:20
+
 Option Explicit
 '////////////////////////////////////////
 
@@ -21,8 +23,15 @@ Sub Main
 
     Dim lv : lv = 1
     Dim rf : Set rf = fso.GetFolder(findPath)
-    Dim fn : fn = fso.GetFileName(findPath)
     findPath = rf.Path
+    Set rf = Nothing
+    Dim fn : fn = fso.GetFileName(findPath)
+
+    Dim saveFile : saveFile = fso.GetAbsolutePathName(".\"&fn&".txt")
+    If fso.FileExists(saveFile) Then
+        WScript.Echo "ファイルがあります("&saveFile&")"
+        Exit Sub
+    End If
 
     '出力ファイルオープン
     out.Open
@@ -31,9 +40,9 @@ Sub Main
     out.WriteText "FOL"&vbTab&findPath, 1
 
     'フォルダー単位出力
-    On Error Resume Next
+    'On Error Resume Next
 
-    Call GetSubFolder(rf, lv)
+    Call GetSubFolder(findPath, lv)
 
     'エラー出力
     If Err.Number <> 0 Then
@@ -42,7 +51,7 @@ Sub Main
     End If
 
     'ファイル出力＆クローズ
-    out.SaveToFile fn & ".txt", 2
+    out.SaveToFile saveFile, 2
     out.Close
 
 End Sub
@@ -61,11 +70,14 @@ End If
 
 '////////////////////////////////////////
 '// フォルダー単位出力
-Sub GetSubFolder(cf, lv)
+Sub GetSubFolder(fp, lv)
 
-    Dim i, tx, mk, ex, sf, fl
+    Dim i, tx, mk, ex
+    Dim cf : Set cf = fso.GetFolder(fp)
 
-    If lv < 3 Then
+    If cf.Name = "old" Then Exit Sub
+
+    If lv < 4 Then
         WScript.Echo Space(lv * 2) & cf.Name
     End If
 
@@ -76,18 +88,22 @@ Sub GetSubFolder(cf, lv)
         WScript.Echo "アクセスできませんでした(" & Err.Number & ")"
         WScript.Echo "ファイルパス(" & cf.Path & ")"
     Else
-        For Each sf In cf.SubFolders
+        Dim sfp, subfol : subfol = sort(cf.SubFolders)
+        For Each sfp In subfol
+            Dim sf : Set sf = fso.GetFolder(sfp)
             tx = indent(sf.Path)
             out.WriteText tx&"│", 1
             out.WriteText tx&"├"&vbTab&"─"&vbTab&"FOL"&vbTab&sf.Name, 1
-            Call GetSubFolder(sf, lv + 1)
+            Call GetSubFolder(sf.Path, lv + 1)
         Next
     End If
     On Error GoTo 0
 
     'ファイル出力
     i = 1
-    For Each fl In cf.Files
+    Dim flp, files : files = sort(cf.Files)
+    For Each flp In files
+        Dim fl : Set fl = fso.GetFile(flp)
         tx = indent(fl.Path)
         mk = mark(i, cf.Files)
         ex = LCase(fso.GetExtensionName(fl))
@@ -97,6 +113,30 @@ Sub GetSubFolder(cf, lv)
     Next
 
 End Sub
+
+Function sort(cols)
+    Dim paths: Set paths = CreateObject("Scripting.Dictionary")
+    Dim i, j, wk, col, names(), rets()
+    ReDim names(cols.Count - 1), rets(cols.Count - 1)
+    i = 0
+    For Each col In cols
+        paths.Add LCase(col.Name), col.Path
+        names(i) = LCase(col.Name)
+        i = i + 1
+    Next
+    For i = 1 To UBound(names)
+        wk = names(i)
+        For j = i - 1 To 0 Step -1
+            If StrComp(names(j), wk) <= 0 Then Exit For
+            names(j + 1) = names(j)
+        Next
+        names(j + 1) = wk
+    Next
+    For i = 0 To UBound(names)
+        rets(i) = paths.Item(names(i))
+    Next
+    sort = rets
+End Function
 
 Function indent(fp)
     Dim i, lv: lv = UBound(Split(Replace(fp, findPath, ""), "\"))

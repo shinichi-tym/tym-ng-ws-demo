@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <package><job><script language="VBScript"><![CDATA[
 
-' update 2022.02.07 11:40
+' update 2022.02.07 14:20
 
 Option Explicit
 '////////////////////////////////////////
@@ -102,12 +102,12 @@ Sub Main
         'エラー出力
         WScript.Echo ErrNum & ":" & ErrTxt
     Else
-        'ワーク画像を削除する
-        Call deleteimg
-        'ワークシート・エクセルファイル出力＆クローズ
-        wkb.SaveAs(saveFile)
-        wkb.Close
     End If
+    'ワーク画像を削除する
+    Call deleteimg
+    'ワークシート・エクセルファイル出力＆クローズ(エラーでは出力してみる)
+    wkb.SaveAs(saveFile)
+    wkb.Close
 
     If xlsapp Then
         xls.Quit
