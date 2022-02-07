@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <package><job><script language="VBScript"><![CDATA[
 
-' update 2022.02.07 14:20
+' update 2022.02.07 16:30
 
 Option Explicit
 '////////////////////////////////////////
@@ -12,7 +12,7 @@ Dim findPath
 
 Dim fso: Set fso = CreateObject("Scripting.FileSystemObject")
 Dim ims: Set ims = CreateObject("Scripting.Dictionary")
-Dim sht
+Dim wkb, sht
 Dim row: row = 0
 
 '////////////////////////////////////////
@@ -41,7 +41,7 @@ Sub Main
     'True:Excel起動, False:Excel利用
     Dim xlsapp : xlsapp = False
     'Excelアプリケーションのインスタンス生成/ワークシート作成
-    Dim xls, wkb
+    Dim xls
     If xlsapp Then
         'Excelアプリケーションを起動して実行する
         On Error Resume Next
@@ -175,9 +175,9 @@ Sub GetSubFolder(fp, lv)
         i = i + 1
     Next
 
-    sht.Application.ScreenUpdating = True
+    wkb.Application.ScreenUpdating = True
     sht.Cells(row, 1).Select
-    sht.Application.ScreenUpdating = False
+    wkb.Application.ScreenUpdating = False
 
 End Sub
 
