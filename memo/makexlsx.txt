@@ -183,7 +183,7 @@ Sub loadimg()
     sht.Cells(2, 2).Select
     Dim imgFolder : Set imgFolder = fso.GetFolder(".\img")
     Dim img : For Each img In imgFolder.Files
-        Dim pic : pic = sht.Pictures.Insert(img.Path)
+        Dim pic : Set pic = sht.Pictures.Insert(img.Path)
         With pic
             .Top = sht.Cells(2, 2).Top
             .Left = sht.Cells(2, 2).Left
@@ -259,7 +259,7 @@ Sub writesht(str)
     Dim a : a = ary(m)
     If a <> "" Then
         If ims.Exists(b) Then
-            ims.Copy
+            ims.Item(b).Copy
             sht.Cells(row, m).Select
             sht.Cells(row, m).Value = ""
             sht.PasteSpecial(1)
