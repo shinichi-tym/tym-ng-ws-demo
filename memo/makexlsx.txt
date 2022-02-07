@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <package><job><script language="VBScript"><![CDATA[
 
+' update 2022.02.07 11:40
+
 Option Explicit
 '////////////////////////////////////////
 
@@ -77,11 +79,11 @@ Sub Main
     sht.Cells.NumberFormatLocal = "@"
     sht.Range("A:T").ColumnWidth = 3
 
-    '指定フォルダ出力
-    writesht "FOL"&vbTab&findPath
-
     'ワーク画像を事前に貼りておく
     Call loadimg
+
+    '指定フォルダ出力
+    writesht "FOL"&vbTab&findPath
 
     'フォルダー単位出力
     On Error Resume Next
@@ -135,6 +137,8 @@ Sub GetSubFolder(fp, lv)
 
     Dim i, tx, mk, ex
     Dim cf : Set cf = fso.GetFolder(fp)
+
+    If cf.Name = "old" Then Exit Sub
 
     If lv < 4 Then
         WScript.Echo Space(lv * 2) & cf.Name
