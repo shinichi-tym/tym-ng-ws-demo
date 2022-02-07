@@ -9,6 +9,7 @@ Dim findPath
 '////////////////////////////////////////
 
 Dim fso: Set fso = CreateObject("Scripting.FileSystemObject")
+Dim ims: Set ims = CreateObject("Scripting.Dictionary")
 Dim sht
 Dim row: row = 0
 
@@ -19,8 +20,9 @@ Sub Main
     '指定フォルダーパスの処理
     Dim lv : lv = 1
     Dim rf : Set rf = fso.GetFolder(findPath)
-    Dim fn : fn = fso.GetFileName(findPath)
     findPath = rf.Path
+    Set rf = Nothing
+    Dim fn : fn = fso.GetFileName(findPath)
 
     Dim saveFile : saveFile = fso.GetAbsolutePathName(".\"&fn&".xlsx")
     If fso.FileExists(saveFile) Then
@@ -65,23 +67,26 @@ Sub Main
         On Error GoTo 0
     End If
 
-    '描画制御(高速化!?)
+    '描画制御(False:高速化!?)
     wkb.Application.Visible = True
-    wkb.Application.ScreenUpdating = False
+    wkb.Application.ScreenUpdating = True
 
     'ワークシートの初期設定
     Set sht = wkb.Sheets(1)
     sht.Activate
     sht.Cells.NumberFormatLocal = "@"
-    sht.Range("A:J").ColumnWidth = 3
+    sht.Range("A:T").ColumnWidth = 3
 
     '指定フォルダ出力
     writesht "FOL"&vbTab&findPath
 
+    'ワーク画像を事前に貼りておく
+    Call loadimg
+
     'フォルダー単位出力
     On Error Resume Next
 
-    Call GetSubFolder(rf, lv)
+    Call GetSubFolder(findPath, lv)
 
     'エラー情報保存
     Dim ErrNum : ErrNum = Err.Number
@@ -95,6 +100,8 @@ Sub Main
         'エラー出力
         WScript.Echo ErrNum & ":" & ErrTxt
     Else
+        'ワーク画像を削除する
+        Call deleteimg
         'ワークシート・エクセルファイル出力＆クローズ
         wkb.SaveAs(saveFile)
         wkb.Close
@@ -124,11 +131,12 @@ End If
 
 '////////////////////////////////////////
 '// フォルダー単位出力
-Sub GetSubFolder(cf, lv)
+Sub GetSubFolder(fp, lv)
 
-    Dim i, tx, mk, ex, sf, fl
+    Dim i, tx, mk, ex
+    Dim cf : Set cf = fso.GetFolder(fp)
 
-    If lv < 3 Then
+    If lv < 4 Then
         WScript.Echo Space(lv * 2) & cf.Name
     End If
 
@@ -139,18 +147,23 @@ Sub GetSubFolder(cf, lv)
         WScript.Echo "アクセスできませんでした(" & Err.Number & ")"
         WScript.Echo "ファイルパス(" & cf.Path & ")"
     Else
-        For Each sf In cf.SubFolders
+        Dim subfol : subfol = sort(cf.SubFolders)
+        For Each sfp In subfol
+            Dim sf : Set sf = fso.GetFolder(sfp)
             tx = indent(sf.Path)
             writesht tx&"│"&vbTab
             writesht tx&"├"&vbTab&"─"&vbTab&"FOL"&vbTab&sf.Name
-            Call GetSubFolder(sf, lv + 1)
+            Call GetSubFolder(sf.Path, lv + 1)
         Next
     End If
     On Error GoTo 0
 
     'ファイル出力
+    sht.Application.ScreenUpdating = False
     i = 1
-    For Each fl In cf.Files
+    Dim files : files = sort(cf.Files)
+    For Each flp In files
+        Dim fl : Set fl = fso.GetFile(flp)
         tx = indent(fl.Path)
         mk = mark(i, cf.Files)
         ex = LCase(fso.GetExtensionName(fl))
@@ -158,8 +171,64 @@ Sub GetSubFolder(cf, lv)
         writesht tx&mk&vbTab&"─"&vbTab&ex&vbTab&fl.Name
         i = i + 1
     Next
+    sht.Application.ScreenUpdating = True
 
 End Sub
+
+'////////////////////////////////////////
+'// ワーク画像ロード＆貼り付け
+Sub loadimg()
+    Dim imgFolder : Set imgFolder = fso.GetFolder(".\img")
+    Dim img : For Each img In imgFolder.Files
+        Dim pic : pic = sht.Pictures.Insert(img)
+        With pic
+            .Top = sht.Cells(2, 2).Top
+            .Left = sht.Cells(2, 2).Left
+            .Height = sht.Cells(2, 2).Height
+        End With
+        ims.Add fso.getBaseName(img), pic
+    Next
+    ' 削除する
+    Dim i, k : k = ims.Keys
+    For Each i In k
+        WScript.Echo i, ims.Item(i)
+    Next
+End Sub
+
+'////////////////////////////////////////
+'// ワーク画像削除
+Sub deleteimg()
+    Dim i, k : k = ims.Keys
+    For Each i In k
+        ims.Item(i).Delete
+    Next
+End Sub
+
+'////////////////////////////////////////
+'// ソート
+Function sort(cols)
+    Dim paths: Set paths = CreateObject("Scripting.Dictionary")
+    Dim i, j, wk, names(), rets()
+    ReDim names(cols.Count - 1), rets(cols.Count - 1)
+    i = 0
+    For Each col In cols
+        paths.Add LCase(col.Name), col.Path
+        names(i) = LCase(col.Name)
+        i = i + 1
+    Next
+    For i = 1 To UBound(names)
+        wk = names(i)
+        For j = i - 1 To 0 Step -1
+            If StrComp(names(j), wk) <= 0 Then Exit For
+            names(j + 1) = names(j)
+        Next
+        names(j + 1) = wk
+    Next
+    For i = 0 To UBound(names)
+        rets(i) = paths.Item(names(i))
+    Next
+    sort = rets
+End Function
 
 '////////////////////////////////////////
 '// インデント文字列作成
@@ -191,18 +260,11 @@ Sub writesht(str)
     Dim b : b = ary(m - 1)
     Dim a : a = ary(m)
     If a <> "" Then
-        Dim img : img = fso.GetAbsolutePathName(".\img\"&b&".png")
-        If fso.FileExists(img) Then
-            With sht.Pictures.Insert(img)
-                .Top = sht.Cells(row, m).Top
-                .Left = sht.Cells(row, m).Left
-                .Height = sht.Cells(row, m).Height
-                .Copy
-                sht.Cells(row, m).Select
-                sht.PasteSpecial(1)
-                .Delete
-            End With
+        If ims.Exists(b) Then
+            ims.Copy
+            sht.Cells(row, m).Select
             sht.Cells(row, m).Value = ""
+            sht.PasteSpecial(1)
         Else
             sht.Cells(row, m).Interior.ColorIndex = 36
         End If
