@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <package><job><script language="VBScript"><![CDATA[
 
-' update 2022.02.07 14:20
+' update 2022.02.08 08:00
 
 Option Explicit
 '////////////////////////////////////////
@@ -88,6 +88,7 @@ Sub GetSubFolder(fp, lv)
         WScript.Echo "アクセスできませんでした(" & Err.Number & ")"
         WScript.Echo "ファイルパス(" & cf.Path & ")"
     Else
+        On Error GoTo 0
         Dim sfp, subfol : subfol = sort(cf.SubFolders)
         For Each sfp In subfol
             Dim sf : Set sf = fso.GetFolder(sfp)
@@ -106,7 +107,7 @@ Sub GetSubFolder(fp, lv)
         Dim fl : Set fl = fso.GetFile(flp)
         tx = indent(fl.Path)
         mk = mark(i, cf.Files)
-        ex = LCase(fso.GetExtensionName(fl))
+        ex = LCase(fso.GetExtensionName(fl.Name))
         out.WriteText tx&"│", 1
         out.WriteText tx&mk&vbTab&"─"&vbTab&ex&vbTab&fl.Name, 1
         i = i + 1
