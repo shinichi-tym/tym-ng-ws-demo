@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <package><job><script language="VBScript"><![CDATA[
 
-' update 2022.02.08 08:00
+' update 2022.02.08 11:10
 
 Option Explicit
 '////////////////////////////////////////
@@ -23,9 +23,8 @@ Sub Main
 
     Dim lv : lv = 1
     Dim rf : Set rf = fso.GetFolder(findPath)
-    findPath = rf.Path
-    Set rf = Nothing
-    Dim fn : fn = fso.GetFileName(findPath)
+    findPath = rf.ShortPath
+    Dim fn : fn = fso.GetFileName(rf.Path)
 
     Dim saveFile : saveFile = fso.GetAbsolutePathName(".\"&fn&".txt")
     If fso.FileExists(saveFile) Then
@@ -37,7 +36,8 @@ Sub Main
     out.Open
 
     '指定フォルダ出力
-    out.WriteText "FOL"&vbTab&findPath, 1
+    WScript.Echo Space(lv * 2) & rf.Name
+    out.WriteText "FOL"&vbTab&rf.Path, 1
 
     'フォルダー単位出力
     'On Error Resume Next
@@ -46,8 +46,8 @@ Sub Main
 
     'エラー出力
     If Err.Number <> 0 Then
+        'エラー出力
         WScript.Echo Err.Number & ":" & Err.Description
-        WScript.Quit(Err.Number)
     End If
 
     'ファイル出力＆クローズ
@@ -74,10 +74,12 @@ Sub GetSubFolder(fp, lv)
 
     Dim i, tx, mk, ex
     Dim cf : Set cf = fso.GetFolder(fp)
+    Dim ff : ff = fso.BuildPath(cf.ParentFolder.ShortPath, cf.Name)
+    Set cf = fso.GetFolder(ff)
 
     If cf.Name = "old" Then Exit Sub
 
-    If lv < 4 Then
+    If 1 < lv And lv < 5 Then
         WScript.Echo Space(lv * 2) & cf.Name
     End If
 

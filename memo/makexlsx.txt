@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <package><job><script language="VBScript"><![CDATA[
 
-' update 2022.02.08 08:00
+' update 2022.02.08 11:10
 
 Option Explicit
 '////////////////////////////////////////
@@ -22,9 +22,8 @@ Sub Main
     '指定フォルダーパスの処理
     Dim lv : lv = 1
     Dim rf : Set rf = fso.GetFolder(findPath)
-    findPath = rf.Path
-    Set rf = Nothing
-    Dim fn : fn = fso.GetFileName(findPath)
+    findPath = rf.ShortPath
+    Dim fn : fn = fso.GetFileName(rf.Path)
 
     Dim saveFile : saveFile = fso.GetAbsolutePathName(".\"&fn&".xlsx")
     If fso.FileExists(saveFile) Then
@@ -83,7 +82,8 @@ Sub Main
     Call loadimg
 
     '指定フォルダ出力
-    writesht "FOL"&vbTab&findPath
+    WScript.Echo Space(lv * 2) & rf.Name
+    writesht "FOL"&vbTab&rf.Path
 
     'フォルダー単位出力
     On Error Resume Next
@@ -137,10 +137,12 @@ Sub GetSubFolder(fp, lv)
 
     Dim i, tx, mk, ex
     Dim cf : Set cf = fso.GetFolder(fp)
+    Dim ff : ff = fso.BuildPath(cf.ParentFolder.ShortPath, cf.Name)
+    Set cf = fso.GetFolder(ff)
 
     If cf.Name = "old" Then Exit Sub
 
-    If lv < 4 Then
+    If 1 < lv And lv < 5 Then
         WScript.Echo Space(lv * 2) & cf.Name
     End If
 
