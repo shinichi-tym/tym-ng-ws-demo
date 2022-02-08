@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<package><job><script language="VBScript"><![CDATA[
+
+' update 2022.02.09 09:00
+
+Option Explicit
+'////////////////////////////////////////
+
+Dim xlsxPath
+
+'////////////////////////////////////////
+
+Dim fso: Set fso = CreateObject("Scripting.FileSystemObject")
+Dim wkb, sht
+
+'////////////////////////////////////////
+'// Main
+Sub Main
+
+    '指定ファイルパスの処理
+    If Not fso.FileExists(xlsxPath) Or _
+       LCase(fso.GetExtensionName(xlsxPath)) <> "xlsx" Then
+        WScript.Echo "エクセルファイルがありません("&xlsxPath&")"
+        Exit Sub
+    End If
+
+    Dim rf : Set rf = fso.GetFile(xlsxPath)
+    xlsxPath = rf.Path
+
+    Dim imgFolder : imgFolder = fso.GetAbsolutePathName(".\img")
+    If Not fso.FolderExists(imgFolder) Then
+        WScript.Echo "フォルダーがありません("&imgFolder&")"
+        Exit Sub
+    End If
+
+    'True:Excel起動, False:Excel利用
+    Dim xlsapp : xlsapp = False
+    'Excelアプリケーションのインスタンス生成/ワークシート作成
+    Dim xls, wkbwk
+    If xlsapp Then
+        'Excelアプリケーションを起動して実行する
+        On Error Resume Next
+        Set xls = CreateObject("Excel.Application")
+        If Err.Number <> 0 Then
+            WScript.Echo Err.Number & ":" & Err.Description
+        End If
+        If Not IsObject(xls) Then
+            WScript.Echo "Excel が起動できませんでした"
+            Exit Sub
+        End If
+        Set wkbwk = xls.Workbooks.Add()
+        On Error GoTo 0
+    Else
+        '起動されているExcelアプリケーションを利用して実行する(高速!?)
+        On Error Resume Next
+        Set wkbwk = CreateObject("Excel.Sheet")
+        If Err.Number <> 0 Then
+            WScript.Echo Err.Number & ":" & Err.Description
+        End If
+        If Not IsObject(wkbwk) Then
+            WScript.Echo "Excel が起動されていません"
+            Exit Sub
+        End If
+        On Error GoTo 0
+    End If
+
+    Set wkb = wkbwk.Open(xlsxPath)
+    wkbwk.Close
+    Set wkbwk = Nothing
+
+    '描画制御(False:高速化!?)
+    wkb.Application.Visible = True
+    wkb.Application.ScreenUpdating = True
+
+    'ワークシートの初期設定
+    Set sht = wkb.Sheets(1)
+    sht.Activate
+    sht.Cells.NumberFormatLocal = "@"
+    sht.Range("A:T").ColumnWidth = 3
+
+    '拡張子を画像に差し替える
+    With sht.Range("A1,C,E,G,I,K,M,O,Q,S")
+
+        Dim img : For Each img In imgFolder.Files
+            Dim pic : Set pic = sht.Pictures.Insert(img.Path)
+            Dim ext : ext = fso.GetBaseName(img.Name)
+            With pic
+                .Top = sht.Cells(2, 2).Top
+                .Left = sht.Cells(2, 2).Left
+                .Height = sht.Cells(2, 2).Height
+                .Copy
+            End With
+            Dim c : Set c = .Find(ext, , -4163, 1, 1, 1, True, True)
+            If Not c Is Nothing Then
+                c.Select
+                sht.PasteSpecial(1)
+            End If
+            pic.Delete
+            Set pic = Nothing
+        Next
+
+    End With
+
+    'ワークシート・エクセルファイル出力＆クローズ
+    wkb.Application.ScreenUpdating = True
+    wkb.Application.Visible = True
+
+    'ワークシート・エクセルファイル出力＆クローズ(エラーでは出力してみる)
+    wkb.Save
+    wkb.Close
+
+    Set sht = Nothing
+    Set wkb = Nothing
+
+End Sub
+
+'////////////////////////////////////////
+'// Main
+Dim arg: Set arg = WScript.Arguments.Unnamed
+If arg.Count = 1 Then
+    xlsxPath = arg(0)
+    WScript.Echo "開始します" & vbCrLf
+    Call Main
+    WScript.Echo vbCrLf & "終了しました"
+Else
+    WScript.Echo "引数を指定してください"
+End If
+
+]]></script></job></package>
