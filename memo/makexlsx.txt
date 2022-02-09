@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <package><job><script language="VBScript"><![CDATA[
 
-' update 2022.02.09 15:30
+' update 2022.02.09 15:55
 
 Option Explicit
 '////////////////////////////////////////
@@ -102,9 +102,6 @@ Sub Main
     Else
     End If
 
-    'ワークシート・エクセルファイル出力＆クローズ(エラーでは出力してみる)
-    wkb.SaveAs(saveFile)
-
     If ErrNum = 0 Then
         On Error Goto 0
         'ワーク画像を事前に貼りておく
@@ -126,7 +123,7 @@ Sub Main
     End If
 
     'ワークシート・エクセルファイル出力＆クローズ(エラーでは出力してみる)
-    wkb.Save
+    wkb.SaveAs(saveFile)
     wkb.Close
 
     If xlsapp Then
@@ -215,6 +212,7 @@ Function chngimg
 
         Dim ext, exts : exts = ims.Keys
         For Each ext In exts
+            WScript.Echo "Convert "&ext&" to image."
             Dim c : Set c = .Find(ext, , -4163, 1, 1, 1, True, True)
             If Not c Is Nothing Then
                 Dim firstCell : Set firstCell = c
@@ -230,7 +228,6 @@ Function chngimg
                         wkb.Application.ScreenUpdating = False
                     End If
                 Loop While firstCell.Address <> c.Address
-                WScript.Echo "Converted "&ext&" to image."
             End If
         Next
 
