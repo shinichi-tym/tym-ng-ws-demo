@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <package><job><script language="VBScript"><![CDATA[
 
-' update 2022.02.09 14:10
+' update 2022.02.09 15:10
 
 Option Explicit
 '////////////////////////////////////////
@@ -11,7 +11,9 @@ Dim xlsxPath
 '////////////////////////////////////////
 
 Dim fso: Set fso = CreateObject("Scripting.FileSystemObject")
+Dim ims: Set ims = CreateObject("Scripting.Dictionary")
 Dim wkb, sht
+Dim cnt : cnt = 0
 
 '////////////////////////////////////////
 '// Main
@@ -36,7 +38,7 @@ Sub Main
     'True:Excel起動, False:Excel利用
     Dim xlsapp : xlsapp = False
     'Excelアプリケーションのインスタンス生成/ワークシート作成
-    Dim xls, wkbwk, app
+    Dim xls, wkbwk
     If xlsapp Then
         'Excelアプリケーションを起動して実行する
         On Error Resume Next
@@ -64,15 +66,13 @@ Sub Main
         On Error GoTo 0
     End If
 
-    Set app = wkbwk.Application
-    Set wkb = app.Workbooks.Open(xlsxPath)
+    Set wkb = wkb.Application.Workbooks.Open(xlsxPath)
     wkbwk.Close
     Set wkbwk = Nothing
 
     '描画制御(False:高速化!?)
-    app.CutCopyMode = False
-    app.Visible = True
-    app.ScreenUpdating = True
+    wkb.Application.Visible = True
+    wkb.Application.ScreenUpdating = False
 
     'ワークシートの初期設定
     Set sht = wkb.Sheets(1)
@@ -80,47 +80,26 @@ Sub Main
     sht.Cells.NumberFormatLocal = "@"
     sht.Range("A:T").ColumnWidth = 3
 
-    '拡張子を画像に差し替える
-    With sht.Range("A:T")
+    'ワーク画像を事前に貼りておく
+    Call loadimg
 
-        Dim imgFolder : Set imgFolder = fso.GetFolder(imgPath)
-        Dim img : For Each img In imgFolder.Files
-            sht.Cells(2, 2).Select
-            Dim pic
-            Dim ext : ext = fso.GetBaseName(img.Name)
-            With sht.Pictures.Insert(img.Path)
-                .Top = sht.Cells(2, 2).Top
-                .Left = sht.Cells(2, 2).Left
-                .Height = sht.Cells(2, 2).Height
-                .Copy
-                sht.Cells(2, 2).PasteSpecial(1)
-                Set pic = sht.Shapes(sht.Shapes.Count)
-                .Delete
-            End With
-            WScript.Sleep(30)
-            app.ScreenUpdating = False
-            Dim c : Set c = .Find(ext, , -4163, 1, 1, 1, True, True)
-            If Not c Is Nothing Then
-                Dim firstCell : Set firstCell = c
-                Do
-                    pic.Copy
-                    c.PasteSpecial(1)
-                    Set c = .FindNext(c)
-                Loop While firstCell.Address <> c.Address
-                WScript.Sleep(30)
-                WScript.Echo "Convert "&ext&" to image."
-            End If
-            pic.Delete
-            Set pic = Nothing
-            app.ScreenUpdating = True
-        Next
-
-    End With
+    '画像を置換する
+    Dim chngimgrc : chngimgrc = False
+    Do
+        On Error Resume Next
+        chngimgrc = chngimg()
+        If Not chngimgrc Then
+            WScript.Echo "Retry ..."
+        End If
+        On Error GoTo 0
+    Loop While chngimgrc = False
 
     'ワークシート・エクセルファイル出力＆クローズ
-    app.ScreenUpdating = True
-    app.Visible = True
+    wkb.Application.ScreenUpdating = True
+    wkb.Application.Visible = True
 
+    'ワーク画像を削除する
+    Call deleteimg
     'ワークシート・エクセルファイル出力＆クローズ(エラーでは出力してみる)
     wkb.Save
     wkb.Close
@@ -146,5 +125,70 @@ If arg.Count = 1 Then
 Else
     WScript.Echo "引数を指定してください"
 End If
+
+'////////////////////////////////////////
+'// change
+Function chngimg
+
+    chngimg = False
+
+    '拡張子を画像に差し替える
+    With sht.Range("A:T")
+
+        Dim i, ext : ext = ims.Keys
+        For Each i In k
+            Dim c : Set c = .Find(ext, , -4163, 1, 1, 1, True, True)
+            If Not c Is Nothing Then
+                Dim firstCell : Set firstCell = c
+                Do
+                    ims.Item(ext).Copy
+                    c.Value = ""
+                    c.PasteSpecial(1)
+                    Set c = .FindNext(c)
+                    cnt = cnt + 1
+                    If cnt Mod 100 = 0 Then
+                        wkb.Application.ScreenUpdating = True
+                        WScript.Echo "converting... "&cnt
+                        wkb.Application.ScreenUpdating = False
+                    End If
+                Loop While firstCell.Address <> c.Address
+                WScript.Echo "Converted "&ext&" to image."
+            End If
+        Next
+
+    End With
+
+    chngimg = True
+
+End Function
+
+'////////////////////////////////////////
+'// ワーク画像ロード＆貼り付け
+Sub loadimg()
+    Dim imgFolder : Set imgFolder = fso.GetFolder(".\img")
+    Dim img : For Each img In imgFolder.Files
+        Dim pic
+        sht.Cells(2, 2).Select
+        With sht.Pictures.Insert(img.Path)
+            .Top = sht.Cells(2, 2).Top
+            .Left = sht.Cells(2, 2).Left
+            .Height = sht.Cells(2, 2).Height
+            .Copy
+            sht.Cells(2, 2).PasteSpecial(1)
+            Set pic = sht.Shapes(sht.Shapes.Count)
+            .Delete
+        End With
+        ims.Add fso.GetBaseName(img), pic
+    Next
+End Sub
+
+'////////////////////////////////////////
+'// ワーク画像削除
+Sub deleteimg()
+    Dim i, k : k = ims.Keys
+    For Each i In k
+        ims.Item(i).Delete
+    Next
+End Sub
 
 ]]></script></job></package>
