@@ -27,16 +27,16 @@ Sub Main
     Dim rf : Set rf = fso.GetFile(xlsxPath)
     xlsxPath = rf.Path
 
-    Dim imgFolder : imgFolder = fso.GetAbsolutePathName(".\img")
-    If Not fso.FolderExists(imgFolder) Then
-        WScript.Echo "フォルダーがありません("&imgFolder&")"
+    Dim imgPath : imgPath = fso.GetAbsolutePathName(".\img")
+    If Not fso.FolderExists(imgPath) Then
+        WScript.Echo "フォルダーがありません("&imgPath&")"
         Exit Sub
     End If
 
     'True:Excel起動, False:Excel利用
     Dim xlsapp : xlsapp = False
     'Excelアプリケーションのインスタンス生成/ワークシート作成
-    Dim xls, wkbwk
+    Dim xls, wkbwk, app
     If xlsapp Then
         'Excelアプリケーションを起動して実行する
         On Error Resume Next
@@ -64,13 +64,14 @@ Sub Main
         On Error GoTo 0
     End If
 
-    Set wkb = wkbwk.Open(xlsxPath)
+    Set app = wkbwk.Application
+    Set wkb = app.Workbooks.Open(xlsxPath)
     wkbwk.Close
     Set wkbwk = Nothing
 
     '描画制御(False:高速化!?)
-    wkb.Application.Visible = True
-    wkb.Application.ScreenUpdating = True
+    app.Visible = True
+    app.ScreenUpdating = True
 
     'ワークシートの初期設定
     Set sht = wkb.Sheets(1)
@@ -79,8 +80,9 @@ Sub Main
     sht.Range("A:T").ColumnWidth = 3
 
     '拡張子を画像に差し替える
-    With sht.Range("A1,C,E,G,I,K,M,O,Q,S")
+    With sht.Range("A:T")
 
+        Dim imgFolder : Set imgFolder = fso.GetFolder(imgPath)
         Dim img : For Each img In imgFolder.Files
             Dim pic : Set pic = sht.Pictures.Insert(img.Path)
             Dim ext : ext = fso.GetBaseName(img.Name)
@@ -90,10 +92,24 @@ Sub Main
                 .Height = sht.Cells(2, 2).Height
                 .Copy
             End With
+            DoEvents
+            Sleep(100)
             Dim c : Set c = .Find(ext, , -4163, 1, 1, 1, True, True)
             If Not c Is Nothing Then
-                c.Select
+                Dim firstCell : Set firstCell = c
+                Dim target : Set target = c
+                Do
+                    Set c = .FindNext(c)
+                    If c.Address = firstCell.Address Then
+                        Exit Do
+                    Else
+                        Set target = app.Union(target, c)
+                    End If
+                Loop
+                target.Select
                 sht.PasteSpecial(1)
+                DoEvents
+                Sleep(100)
             End If
             pic.Delete
             Set pic = Nothing
@@ -102,15 +118,20 @@ Sub Main
     End With
 
     'ワークシート・エクセルファイル出力＆クローズ
-    wkb.Application.ScreenUpdating = True
-    wkb.Application.Visible = True
+    app.ScreenUpdating = True
+    app.Visible = True
 
     'ワークシート・エクセルファイル出力＆クローズ(エラーでは出力してみる)
     wkb.Save
     wkb.Close
 
+    If xlsapp Then
+        xls.Quit
+    End If
+
     Set sht = Nothing
     Set wkb = Nothing
+    Set xls = Nothing
 
 End Sub
 
