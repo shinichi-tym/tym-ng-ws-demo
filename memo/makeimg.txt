@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <package><job><script language="VBScript"><![CDATA[
 
-' update 2022.02.09 15:10
+' update 2022.02.09 15:30
 
 Option Explicit
 '////////////////////////////////////////
@@ -66,7 +66,7 @@ Sub Main
         On Error GoTo 0
     End If
 
-    Set wkb = wkb.Application.Workbooks.Open(xlsxPath)
+    Set wkb = wkbwk.Application.Workbooks.Open(xlsxPath)
     wkbwk.Close
     Set wkbwk = Nothing
 
@@ -135,8 +135,8 @@ Function chngimg
     '拡張子を画像に差し替える
     With sht.Range("A:T")
 
-        Dim i, ext : ext = ims.Keys
-        For Each i In k
+        Dim ext, exts : exts = ims.Keys
+        For Each ext In exts
             Dim c : Set c = .Find(ext, , -4163, 1, 1, 1, True, True)
             If Not c Is Nothing Then
                 Dim firstCell : Set firstCell = c
@@ -148,7 +148,7 @@ Function chngimg
                     cnt = cnt + 1
                     If cnt Mod 100 = 0 Then
                         wkb.Application.ScreenUpdating = True
-                        WScript.Echo "converting... "&cnt
+                        WScript.Echo "converting image : "&cnt
                         wkb.Application.ScreenUpdating = False
                     End If
                 Loop While firstCell.Address <> c.Address
