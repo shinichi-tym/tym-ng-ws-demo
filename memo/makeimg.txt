@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <package><job><script language="VBScript"><![CDATA[
 
-' update 2022.02.09 11:55
+' update 2022.02.09 14:10
 
 Option Explicit
 '////////////////////////////////////////
@@ -70,6 +70,7 @@ Sub Main
     Set wkbwk = Nothing
 
     '描画制御(False:高速化!?)
+    app.CutCopyMode = False
     app.Visible = True
     app.ScreenUpdating = True
 
@@ -84,28 +85,34 @@ Sub Main
 
         Dim imgFolder : Set imgFolder = fso.GetFolder(imgPath)
         Dim img : For Each img In imgFolder.Files
-            Dim pic : Set pic = sht.Pictures.Insert(img.Path)
+            sht.Cells(2, 2).Select
+            Dim pic
             Dim ext : ext = fso.GetBaseName(img.Name)
-            With pic
+            With sht.Pictures.Insert(img.Path)
                 .Top = sht.Cells(2, 2).Top
                 .Left = sht.Cells(2, 2).Left
                 .Height = sht.Cells(2, 2).Height
                 .Copy
+                sht.Cells(2, 2).PasteSpecial(1)
+                Set pic = sht.Shapes(sht.Shapes.Count)
+                .Delete
             End With
             WScript.Sleep(30)
+            app.ScreenUpdating = False
             Dim c : Set c = .Find(ext, , -4163, 1, 1, 1, True, True)
             If Not c Is Nothing Then
                 Dim firstCell : Set firstCell = c
                 Do
-                    c.Select
+                    pic.Copy
+                    c.PasteSpecial(1)
                     Set c = .FindNext(c)
-                    sht.PasteSpecial(1)
                 Loop While firstCell.Address <> c.Address
                 WScript.Sleep(30)
                 WScript.Echo "Convert "&ext&" to image."
             End If
             pic.Delete
             Set pic = Nothing
+            app.ScreenUpdating = True
         Next
 
     End With
