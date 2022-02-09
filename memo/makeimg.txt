@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <package><job><script language="VBScript"><![CDATA[
 
-' update 2022.02.09 15:55
+' update 2022.02.10 08:10
 
 Option Explicit
 '////////////////////////////////////////
@@ -137,22 +137,24 @@ Function chngimg
 
         Dim ext, exts : exts = ims.Keys
         For Each ext In exts
-            WScript.Echo "Convert "&ext&" to image."
-            Dim c : Set c = .Find(ext, , -4163, 1, 1, 1, True, True)
+            Dim c, d : Set c = .Find(ext, , -4163, 1, 1, 1, True, True)
             If Not c Is Nothing Then
-                Dim firstCell : Set firstCell = c
+                Dim firstAddress : firstAddress = c.Address
                 Do
-                    ims.Item(ext).Copy
+                    Set d = ims.Item(ext).Duplicate
                     c.Value = ""
-                    c.PasteSpecial(1)
-                    Set c = .FindNext(c)
+                    d.Top = c.Top
+                    d.Left = c.Left
                     cnt = cnt + 1
                     If cnt Mod 100 = 0 Then
                         wkb.Application.ScreenUpdating = True
                         WScript.Echo "converting image : "&cnt
                         wkb.Application.ScreenUpdating = False
                     End If
-                Loop While firstCell.Address <> c.Address
+                    Set c = .FindNext(c)
+                    If c Is Nothing Then Exit Do
+                Loop Until c.Address = firstAddress
+                WScript.Echo "Converted "&ext&" to image."
             End If
         Next
 
@@ -176,6 +178,8 @@ Sub loadimg()
             .Copy
             sht.Cells(2, 2).PasteSpecial(1)
             Set pic = sht.Shapes(sht.Shapes.Count)
+            pic.Top = sht.Cells(2, 2).Top
+            pic.Left = sht.Cells(2, 2).Left
             .Delete
         End With
         ims.Add fso.GetBaseName(img), pic
