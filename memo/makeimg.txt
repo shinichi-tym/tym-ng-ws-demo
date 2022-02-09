@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <package><job><script language="VBScript"><![CDATA[
 
-' update 2022.02.09 09:00
+' update 2022.02.09 11:55
 
 Option Explicit
 '////////////////////////////////////////
@@ -92,24 +92,17 @@ Sub Main
                 .Height = sht.Cells(2, 2).Height
                 .Copy
             End With
-            DoEvents
-            Sleep(100)
+            WScript.Sleep(30)
             Dim c : Set c = .Find(ext, , -4163, 1, 1, 1, True, True)
             If Not c Is Nothing Then
                 Dim firstCell : Set firstCell = c
-                Dim target : Set target = c
                 Do
+                    c.Select
                     Set c = .FindNext(c)
-                    If c.Address = firstCell.Address Then
-                        Exit Do
-                    Else
-                        Set target = app.Union(target, c)
-                    End If
-                Loop
-                target.Select
-                sht.PasteSpecial(1)
-                DoEvents
-                Sleep(100)
+                    sht.PasteSpecial(1)
+                Loop While firstCell.Address <> c.Address
+                WScript.Sleep(30)
+                WScript.Echo "Convert "&ext&" to image."
             End If
             pic.Delete
             Set pic = Nothing
