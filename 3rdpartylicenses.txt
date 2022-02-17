@@ -266,6 +266,9 @@ MIT
 tym-table
 MIT
 
+tym-table-editor
+MIT
+
 tym-tree
 MIT
 
